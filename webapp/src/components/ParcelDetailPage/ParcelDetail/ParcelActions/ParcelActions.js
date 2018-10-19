@@ -6,9 +6,10 @@ import { Button, Icon } from 'semantic-ui-react'
 import { locations } from 'locations'
 import { parcelType, publicationType, mortgageType } from 'components/types'
 import { t } from '@dapps/modules/translation/utils'
-import { isOnSale } from 'shared/asset'
+import { getOpenPublication } from 'shared/asset'
 import { hasParcelsConnected } from 'shared/parcel'
 import { isFeatureEnabled } from 'lib/featureUtils'
+import { isLegacyPublication } from 'modules/publication/utils'
 
 import './ParcelActions.css'
 
@@ -27,11 +28,20 @@ export default class ParcelActions extends React.PureComponent {
   }
 
   render() {
-    const { parcel, isOwner, mortgage, isLoading, publications } = this.props
+    const {
+      wallet,
+      parcel,
+      isOwner,
+      mortgage,
+      isLoading,
+      publications
+    } = this.props
     if (!parcel || isLoading) {
       return null
     }
     const { x, y } = parcel
+    const publication = getOpenPublication(parcel, publications)
+    const isOnSale = !!publication
 
     return (
       <div className="ParcelActions">
@@ -52,7 +62,7 @@ export default class ParcelActions extends React.PureComponent {
                 </Button>
               </Link>
             ) /* Estate Feature */}
-            {isOnSale(parcel, publications) ? (
+            {isOnSale ? (
               <Link to={locations.cancelSaleParcel(x, y)}>
                 <Button size="tiny" primary>
                   <Icon name="cancel" />
@@ -68,20 +78,22 @@ export default class ParcelActions extends React.PureComponent {
               </Link>
             )}
           </React.Fragment>
-        ) : isOnSale(parcel, publications) && !mortgage ? (
+        ) : isOnSale && !mortgage ? (
           <React.Fragment>
             <Link to={locations.buyParcel(x, y)}>
               <Button primary size="large">
                 {t('asset_detail.publication.buy')}
               </Button>
             </Link>
-            {isFeatureEnabled('MORTGAGES') && (
-              <Link to={locations.buyParcelByMortgage(x, y)}>
-                <Button size="large">
-                  {t('parcel_detail.publication.mortgage')}
-                </Button>
-              </Link>
-            ) /* Mortgage Feature */}
+            {isFeatureEnabled('MORTGAGES') &&
+              wallet.address &&
+              !isLegacyPublication(publication) && (
+                <Link to={locations.buyParcelByMortgage(x, y)}>
+                  <Button size="large">
+                    {t('parcel_detail.publication.mortgage')}
+                  </Button>
+                </Link>
+              ) /* Mortgage Feature */}
           </React.Fragment>
         ) : null}
       </div>
